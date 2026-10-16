@@ -230,21 +230,6 @@ Before production deployment, address these known concerns:
 
 Never place Gemini keys, service-account credentials, payment secrets, or private deployment configuration in this repository. Rotate any credential that has ever been committed or shared outside Secret Manager.
 
-## Pre-push checklist
-
-- [ ] Confirm `git status --short --untracked-files=all` contains no secrets, uploaded spreadsheets, or generated build output.
-- [ ] Confirm `git check-ignore generateContests/.env.yaml ingestQuestions/.env.yaml` succeeds.
-- [ ] Run `npm ci` and `npm run build` in every package.
-- [ ] Run `git diff --cached --check` after staging.
-- [ ] Confirm all package lockfiles are included.
-- [ ] Verify the CI workflow passes before merging to `main`.
-- [ ] Confirm deployed function entrypoints match the package names and README inventory.
-- [ ] Confirm Pub/Sub subscriptions and dead-letter policies exist for important events.
-- [ ] Confirm Scheduler jobs use the intended timezone and target topics.
-- [ ] Verify runtime service-account IAM permissions using least privilege.
-- [ ] Deploy to a non-production environment and test one representative event for each trigger type.
-- [ ] Review Cloud Logging after deployment and configure error-rate alerts.
-
 ## License
 
 MedQuel Cloud Functions is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
