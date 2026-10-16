@@ -1,0 +1,61 @@
+# dependencies
+docs/
+gen/
+
+test.db
+creds.json
+
+node_modules/
+tmp/*
+
+# Expo
+.expo/
+dist/
+web-build/
+**/.wrangler
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+requests/
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+config/serviceAccountKey.json
+
+# typescript
+*.tsbuildinfo
+op.json
+yarn.lock
+modules/test.json
+modules/test.txt
+
+.playwright-mcp/
+*.log
+.firebase/**
+
+# dev tools
+get-token-script/
+nginx-dev.conf
+helper.txt
+helper.md
+TODO
+
+# local
+/tmp
