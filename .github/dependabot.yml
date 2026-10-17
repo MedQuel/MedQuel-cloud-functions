@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /checkStreaks
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /contestLifecycle
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /evaluateBadges
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /generateContests
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /ingestQuestions
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /onQuizCompleted
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /rollupLeaderboard
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /sendNotification
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /weeklyStudyPlanRegeneration
+    schedule:
+      interval: weekly
