@@ -16,7 +16,7 @@
     "@google-cloud/functions-framework": "^5.0.5",
     "@google-cloud/storage": "^7.21.0",
     "exceljs": "^4.4.0",
-    "firebase-admin": "^14.2.0"
+    "firebase-admin": "^14.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.1.1",
