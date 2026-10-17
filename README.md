@@ -1,10 +1,11 @@
-# MedQuel Cloud Functions
-
 <div align="center">
+
+# MedQuel Cloud Functions
 
 ### Background processing for the MedQuel learning platform
 
 <p>
+	<a href="https://github.com/MedQuel/MedQuel-cloud-functions/actions/workflows/ci.yml"><img src="https://github.com/MedQuel/MedQuel-cloud-functions/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
 	<a href="https://github.com/MedQuel/MedQuel-cloud-functions"><img src="https://img.shields.io/badge/repository-MedQuel--cloud--functions-1D6FE0" alt="Repository" /></a>
 	<a href="https://github.com/MedQuel/MedQuel-cloud-functions/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-2EA44C" alt="Apache 2.0 license" /></a>
 	<a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-24-339933" alt="Node.js 24" /></a>
