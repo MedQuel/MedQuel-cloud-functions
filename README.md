@@ -49,7 +49,7 @@ MedQuel GraphQL API on Cloud Run
 
 The functions are deployed independently as second-generation Google Cloud Functions in `asia-south1`. Pub/Sub and Cloud Scheduler provide delivery and scheduling. Firestore transactions and event idempotency documents protect the main event-driven flows from duplicate delivery.
 
-The broader system design is described in the MedQuel Backend Architecture document. This README describes the code that actually lives in this repository; planned API services, Firestore rules, indexes, payment webhooks, and other infrastructure are not implemented here.
+The broader system design is described in the MedQuel Backend Architecture document. This README describes the code that actually lives in this repository; Firestore rules, indexes, and other infrastructure are deployment-managed outside this repository.
 
 ## Function inventory
 
@@ -57,13 +57,14 @@ The broader system design is described in the MedQuel Backend Architecture docum
 | ----------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `onQuizCompleted`             | Pub/Sub                     | Updates leaderboard periods, activity logs, and user statistics after a completed quiz.                        |
 | `evaluateBadges`              | Pub/Sub                     | Evaluates active badge rules and publishes notification requests for newly earned badges.                      |
+| `paymentWebhook`              | HTTP                        | Authenticates Razorpay webhooks, activates captured payments, processes refunds, and publishes premium notifications. |
 | `sendNotification`            | Pub/Sub                     | Writes in-app notifications and sends FCM push notifications.                                                  |
 | `ingestQuestions`             | Cloud Storage               | Parses `.xlsx` uploads, validates rows, checks image paths, deduplicates, and inserts questions into BigQuery. |
 | `generateContests`            | Cloud Scheduler via Pub/Sub | Generates rotation contests from active templates.                                                             |
 | `generateWeeklyChampionship`  | Cloud Scheduler via Pub/Sub | Generates the weekly grand championship contest.                                                               |
 | `contestLifecycle`            | Cloud Scheduler via Pub/Sub | Activates scheduled contests and finalizes contests whose end time has passed.                                 |
 | `rollupLeaderboard`           | Cloud Scheduler via Pub/Sub | Recalculates ranks and weekly deltas for active leaderboard periods.                                           |
-| `checkStreaks`                | Cloud Scheduler via Pub/Sub | Resets expired streaks and removes old completed contest documents.                                            |
+| `checkStreaks`                | Cloud Scheduler via Pub/Sub | Resets expired streaks, publishes streak-reset notifications, removes old completed contest documents, and expires premium subscriptions. |
 | `weeklyStudyPlanRegeneration` | Cloud Scheduler via Pub/Sub | Regenerates active user study plans using Gemini with a deterministic fallback.                                |
 
 `generateContests` and `generateWeeklyChampionship` are two exported entrypoints from the `generateContests` package.
@@ -79,10 +80,13 @@ evaluateBadges/
 generateContests/          # two entrypoints
 ingestQuestions/
 onQuizCompleted/
+paymentWebhook/
 rollupLeaderboard/
 sendNotification/
 weeklyStudyPlanRegeneration/
 ```
+
+Premium expiration is implemented in the `checkStreaks` deployment and runs as part of its daily maintenance sweep.
 
 Every package contains:
 
@@ -158,6 +162,8 @@ Environment files are local deployment inputs only. `*.env.yaml` is ignored by g
 | `generateContests`            | `PROJECT_ID`, `DATASET_ID`                                                              | None                                                                           |
 | `ingestQuestions`             | `PROJECT_ID`, `DATASET_ID`, `QUESTIONS_TABLE`, `BUCKET_NAME`, `FIREBASE_STORAGE_BUCKET` | `UPLOAD_PREFIX` (defaults to `incoming/`)                                      |
 | `evaluateBadges`              | None                                                                                    | `PUBSUB_TOPIC_NOTIFICATIONS`                                                   |
+| `paymentWebhook`              | `RAZORPAY_WEBHOOK_SECRET`                                                               | `PUBSUB_TOPIC_NOTIFICATIONS`                                                   |
+| `checkStreaks`                | None                                                                                    | `PUBSUB_TOPIC_NOTIFICATIONS`                                                   |
 | `weeklyStudyPlanRegeneration` | At least one of `GEMINI_API_KEY_1` or `GEMINI_API_KEY_2` for AI generation              | `GEMINI_MODEL`                                                                 |
 | Other packages                | None                                                                                    | Uses Google Application Default Credentials and Firebase project configuration |
 
@@ -181,6 +187,21 @@ gcloud functions deploy onQuizCompleted \
 	--source=onQuizCompleted \
 	--entry-point=onQuizCompleted \
 	--trigger-topic=quiz-events
+```
+
+Deploy the Razorpay webhook as an unauthenticated HTTP function. Authentication is performed by the `x-razorpay-signature` HMAC header, so do not require Cloud IAM authentication for Razorpay's request:
+
+```bash
+gcloud functions deploy paymentWebhook \
+	--gen2 \
+	--runtime=nodejs24 \
+	--region=asia-south1 \
+	--source=paymentWebhook \
+	--entry-point=paymentWebhook \
+	--trigger-http \
+	--allow-unauthenticated \
+	--set-env-vars=PUBSUB_TOPIC_NOTIFICATIONS=notification-events \
+	--set-secrets=RAZORPAY_WEBHOOK_SECRET=RAZORPAY_WEBHOOK_SECRET:latest
 ```
 
 Use the correct trigger, service account, environment variables, and Pub/Sub topic for each function. Do not copy the example blindly into production. Verify the deployed entrypoint and trigger in the Cloud Functions console after every deployment.
@@ -218,6 +239,14 @@ Observed schedules, all using `Asia/Kolkata`:
 
 The deployed schedule is authoritative. Keep it synchronized with code documentation and verify timezone assumptions when changing schedules.
 
+### HTTP endpoints
+
+| Function          | Endpoint purpose                                      | Authentication                                  |
+| ----------------- | ----------------------------------------------------- | ----------------------------------------------- |
+| `paymentWebhook`  | Receives Razorpay payment and refund webhook events  | Razorpay HMAC signature in `x-razorpay-signature` |
+
+The payment webhook stores idempotency claims in `webhookEvents` with a 90-day `expiresAt` field. Configure a Firestore TTL policy on `webhookEvents.expiresAt` so old claims are removed automatically.
+
 ## Reliability and security
 
 Before production deployment, address these known concerns:
@@ -228,6 +257,7 @@ Before production deployment, address these known concerns:
 4. Push notification errors are currently logged as best effort. Decide explicitly whether failed pushes should be retried.
 5. Validate complete Pub/Sub event schemas, not only `sessionId` and `userId`, before applying numeric increments or derived statistics.
 6. Add Firestore indexes, security rules, IAM bindings, alerting, and dead-letter topics as deployment-managed infrastructure rather than relying on console state.
+7. Configure a Firestore TTL policy on `webhookEvents.expiresAt` to remove completed webhook claims after 90 days.
 
 Never place Gemini keys, service-account credentials, payment secrets, or private deployment configuration in this repository. Rotate any credential that has ever been committed or shared outside Secret Manager.
 
