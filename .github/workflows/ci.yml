@@ -30,6 +30,7 @@ jobs:
           - generateContests
           - ingestQuestions
           - onQuizCompleted
+          - paymentWebhook
           - rollupLeaderboard
           - sendNotification
           - weeklyStudyPlanRegeneration
